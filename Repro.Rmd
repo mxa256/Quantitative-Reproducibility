@@ -1,0 +1,325 @@
+---
+title: "Quantitative Reproducibility"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#Loading Packages 
+
+```{r load-packages, message = FALSE, warning=FALSE, echo = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(GGally)
+library(gridExtra)
+library(tidyverse)
+library(pander)
+library(forcats)
+library(tableone)
+```
+
+##Loading and Cleaning Data
+
+```{r}
+
+Repro <- readxl::read_excel("/Users/mona/Desktop/Research/QuantRepro/ForAnalysis.xlsx")
+
+#Since two coders reviewed the data, this is the data set with all reconciled information. Therefore there are two rows for each data entry (one for each coder). This eliminates the duplicate entries.
+Repro <- Repro %>% filter(Coder == "LK") 
+
+#Re-numbers the rows.
+Repro <- Repro %>% replace("ID", 1:300)
+
+#Cleaning the MetaAnalysis variable
+
+as.character(Repro$MetaAnalysis)
+
+Repro$MetaAnalysis[Repro$MetaAnalysis =="0"] <- "None"
+
+Repro$MetaAnalysis[Repro$MetaAnalysis =="1"] <- "A single citation"
+
+Repro$MetaAnalysis[Repro$MetaAnalysis <= "5" & Repro$MetaAnalysis >="2"] <- "Two to five citations"
+
+Repro$MetaAnalysis[Repro$MetaAnalysis =="NA"] <- NA
+
+levels(Repro$MetaAnalysis) <- c("None", "A single citation", "Two to five citations")
+
+#Cleaning the Systematic Review variable
+
+as.character(Repro$Systematic)
+
+Repro$Systematic[Repro$Systematic =="0"] <- "None"
+
+Repro$Systematic[Repro$Systematic =="1"] <- "A single citation"
+
+Repro$Systematic[Repro$Systematic>="2" & Repro$Systematic<="5"] <- "Two to five citations"
+
+Repro$Systematic[Repro$Systematic =="NA"] <- NA
+
+levels(Repro$Systematic) <- c("None", "A single citation", "Two to five citations")
+
+
+#Cleaning the Replication variable
+
+as.character(Repro$Replication)
+
+Repro$Replication[Repro$Replication =="0"] <- "None"
+
+Repro$Replication[Repro$Replication =="1"] <- "A single citation"
+
+Repro$Replication[Repro$Replication>="2" & Repro$Systematic<="5"] <- "Two to five citations"
+
+Repro$Replication[Repro$Replication =="NA"] <- NA
+
+levels(Repro$Replication) <- c("None", "A single citation", "Two to five citations")
+
+```
+
+## Creating a subset of Empirical data 
+
+```{r}
+
+#Exclude the texts that we could not access online (n = 4).
+Repro <- Repro %>% filter(Issues == "There are no issues") 
+
+#Number of studies with no empirical data.
+sum(Repro$StudyType == "No empirical data (e.g. editorials, commentaries [without reanalysis], simulations, news, and reviews) -- skip to question 36")
+
+#Exclude non-empirical studies (n = 78). 
+ReproEmpirical <- Repro  %>% filter(Repro$StudyType != "No empirical data (e.g. editorials, commentaries [without reanalysis], simulations, news, and reviews) -- skip to question 36") 
+
+#Number of studies that are case studies
+sum(ReproEmpirical$StudyType == "Empirical data: case study")
+
+#Number of studies that are case studies
+sum(ReproEmpirical$StudyType == "Empirical data: case series")
+
+#Exclude case reports and case series (n = 61).
+ReproEmpirical <- ReproEmpirical  %>% filter(ReproEmpirical$StudyType != "Empirical data: case study")
+ReproEmpirical <- ReproEmpirical  %>% filter(ReproEmpirical$StudyType != "Empirical data: case series")
+```
+
+#Creating Table: List of Journal Names
+
+```{r}
+
+#List of Journals Included
+
+levels(as.factor(Repro$Journal))
+
+#List of Journal Impact Factors
+
+table(Repro$Journal, Repro$Impact)
+
+#Number of articles from each Journal
+
+#count((Repro$Journal)
+
+
+```
+
+
+#Creating Table: Study Characteristics
+
+```{r set-options, echo=FALSE, cache=FALSE, fig.width=1000, fig.height=1000}
+options(width = 10000)
+
+#Creating the Table
+
+row_variables <- 
+  c("Journal", 
+    "StudyType", 
+    "Country", 
+    "Subjects",
+    "MetaAnalysis",
+    "Systematic")
+
+characteristics <- print(
+                  CreateTableOne(vars = row_variables, 
+                        data = Repro, 
+                        includeNA = FALSE), 
+                        showAllLevels = TRUE,
+                        width = 1000)
+
+#Replication Studies for only studies that had empirical data
+
+characteristics1 <- print(
+                  CreateTableOne(vars = "Replication", 
+                        data = ReproEmpirical, 
+                        includeNA = FALSE), 
+                        showAllLevels = TRUE)
+
+table(ReproEmpirical$Replication)
+  
+
+```
+
+#Creating Table: Reproducible Characteristics
+
+
+```{r pressure, echo=FALSE}
+
+#Looking at all studies
+
+repro_variables <- 
+  c("Open", 
+    "Funding", 
+    "COI")
+
+characteristics <- print(
+                  CreateTableOne(vars = repro_variables, 
+                        data = Repro, 
+                        includeNA = FALSE), 
+                        showAllLevels = TRUE)
+
+#Only studies that had empirical data.
+
+repro_variables1 <- 
+  c("Data", 
+    "Register", 
+    "Protocol", 
+    "Script",
+    "Materials")
+
+characteristics1 <- print(
+                  CreateTableOne(vars = repro_variables1, 
+                        data = ReproEmpirical, 
+                        includeNA = FALSE), 
+                        showAllLevels = TRUE)
+
+#Confidence Intervals
+
+#Open Access
+
+binom.test(264, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(32, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+#Funding
+
+binom.test(157, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(88, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(29, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(18, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(3, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(1, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+#COI Statement
+
+binom.test(241, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(29, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(25, 296,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+#Data availability
+
+binom.test(151, 157,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(5, 157,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(1, 157,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+#Pre-registration
+
+binom.test(153, 157,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(4, 157,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+#Protocol
+
+binom.test(151, 157,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(6, 157,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+
+#Material availability
+
+binom.test(143, 156,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+binom.test(13, 156,
+           0.5,
+           alternative="two.sided",
+           conf.level=0.95)
+
+```
+
+#Miscellaneous 
+```{r}
+
+#Among publications that were publicly funded, which ones were available via open access? 
+
+FundOpen <- Repro %>% filter(Repro$Funding == "Yes - the statement says that there was funding from a public organization" & Repro$Open == "Yes - found via Open Access Button")
+
+summary(FundOpen)
+
+```
+
+
