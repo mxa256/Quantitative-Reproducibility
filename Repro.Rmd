@@ -12,25 +12,15 @@ knitr::opts_chunk$set(echo = TRUE)
 #Loading Packages 
 
 ```{r load-packages, message = FALSE, warning=FALSE, echo = FALSE}
-install.packages("ggplot2")
+
 library(ggplot2)
-install.packages("plyr")
-library(plyr)
-install.packages("dplyr")
 library(dplyr)
-install.packages("statsr")
 library(statsr)
-install.packages("GGally")
 library(GGally)
-install.packages("gridExtra")
 library(gridExtra)
-install.packages("tidyverse")
 library(tidyverse)
-install.packages("pander")
 library(pander)
-install.packages("forcats")
 library(forcats)
-install.packages("tableone")
 library(tableone)
 options(width = 135)
 ```
